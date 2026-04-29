@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "946705205531",
+    "project_id": "grama-sanjeevini-37885",
+    "storage_bucket": "grama-sanjeevini-37885.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:946705205531:android:06f13ef0c8ca3c2805ebbe",
+        "android_client_info": {
+          "package_name": "com.example.gramasanjeevini"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxmPTXMpy4j0IxrMAoiMWoBNH4Lu4t1MI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
