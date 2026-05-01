@@ -9,15 +9,17 @@ object SeedData {
         val db = FirebaseFirestore.getInstance()
         
         val pharmacyId = "pharmacy_001"
-        val pharmacistId = "pharmacist_001" // This should ideally be a real UID after login
+        val pharmacistId = "pharmacist_001" 
         
+        // Davanagere coordinates: 14.4644, 75.9218
         val mockPharmacy = Pharmacy(
             id = pharmacyId,
             ownerId = pharmacistId,
-            name = "Sanjeevini Medical Store",
-            address = "Anantapur Main Road",
-            lat = 16.5061,
-            lng = 80.6480
+            name = "Sanjeevini Medical Store, Davanagere",
+            address = "PB Road, Near Davanagere Railway Station",
+            phone = "+91 98765 43210",
+            lat = 14.4644,
+            lng = 75.9218
         )
 
         val mockItems = listOf(
@@ -26,24 +28,28 @@ object SeedData {
                 ownerId = pharmacistId,
                 pharmacyId = pharmacyId,
                 pharmacyName = mockPharmacy.name,
+                pharmacyPhone = mockPharmacy.phone,
                 pharmacyLat = mockPharmacy.lat,
                 pharmacyLng = mockPharmacy.lng,
                 name = "Paracetamol 500mg",
                 searchName = "paracetamol",
                 quantity = 100,
-                isLifeSaving = false
+                isLifeSaving = false,
+                updatedAt = System.currentTimeMillis()
             ),
             InventoryItem(
                 id = "item_002",
                 ownerId = pharmacistId,
                 pharmacyId = pharmacyId,
                 pharmacyName = mockPharmacy.name,
+                pharmacyPhone = mockPharmacy.phone,
                 pharmacyLat = mockPharmacy.lat,
                 pharmacyLng = mockPharmacy.lng,
                 name = "Insulin Glargine",
                 searchName = "insulin",
                 quantity = 10,
-                isLifeSaving = true
+                isLifeSaving = true,
+                updatedAt = System.currentTimeMillis()
             )
         )
 

@@ -1,9 +1,20 @@
 package com.example.gramasanjeevini.ui
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,15 +26,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.gramasanjeevini.models.UserProfile
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var isPharmacist by remember { mutableStateOf(false) }
     var isSignUp by remember { mutableStateOf(false) }
@@ -32,12 +48,46 @@ fun LoginScreen() {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    var userLat by remember { mutableDoubleStateOf(0.0) }
+    var userLng by remember { mutableDoubleStateOf(0.0) }
+    var isLocationFetched by remember { mutableStateOf(false) }
+
+    val mapLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            userLat = result.data?.getDoubleExtra("lat", 0.0) ?: 0.0
+            userLng = result.data?.getDoubleExtra("lng", 0.0) ?: 0.0
+            isLocationFetched = true
+            Toast.makeText(context, "Location Set from Map!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { loc ->
+                    val intent = Intent(context, LocationPickerActivity::class.java).apply {
+                        if (loc != null) {
+                            putExtra("lat", loc.latitude)
+                            putExtra("lng", loc.longitude)
+                        }
+                    }
+                    mapLauncher.launch(intent)
+                }
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -88,15 +138,32 @@ fun LoginScreen() {
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = PasswordVisualTransformation(),
                     textStyle = TextStyle(color = Color.Black)
                 )
-
+                
                 if (isSignUp) {
+                    Text(
+                        text = "Password must be at least 6 characters",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = PasswordVisualTransformation(),
+                        textStyle = TextStyle(color = Color.Black)
+                    )
+
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -105,6 +172,34 @@ fun LoginScreen() {
                         )
                         Text("I am a Pharmacist", fontSize = 14.sp, color = Color.Black)
                     }
+
+                    Button(
+                        onClick = {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                            } else {
+                                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                                    .addOnSuccessListener { loc ->
+                                        val intent = Intent(context, LocationPickerActivity::class.java).apply {
+                                            if (loc != null) {
+                                                putExtra("lat", loc.latitude)
+                                                putExtra("lng", loc.longitude)
+                                            }
+                                        }
+                                        mapLauncher.launch(intent)
+                                    }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isLocationFetched) Color(0xFF16A34A) else Color(0xFF0D9488)),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (isLocationFetched) "Location Set ✓" else "Set My Location on Map")
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 if (isLoading) {
@@ -116,6 +211,25 @@ fun LoginScreen() {
                                 Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
+                            if (isSignUp) {
+                                if (name.isBlank()) {
+                                    Toast.makeText(context, "Please enter your name", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                if (password.length < 6) {
+                                    Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                if (password != confirmPassword) {
+                                    Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                if (!isLocationFetched) {
+                                    Toast.makeText(context, "Please set your location on the map", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                            }
+
                             isLoading = true
                             if (isSignUp) {
                                 auth.createUserWithEmailAndPassword(email, password)
@@ -124,7 +238,9 @@ fun LoginScreen() {
                                         val profile = UserProfile(
                                             name = name,
                                             email = email,
-                                            role = if (isPharmacist) "pharmacist" else "consumer"
+                                            role = if (isPharmacist) "pharmacist" else "consumer",
+                                            lat = userLat,
+                                            lng = userLng
                                         )
                                         db.collection("users").document(uid).set(profile)
                                             .addOnSuccessListener {

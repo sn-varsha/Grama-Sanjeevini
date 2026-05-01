@@ -9,7 +9,9 @@ data class Clinic(
     val status: String,
     val type: String,
     val rating: Double,
-    val imageUrl: String
+    val imageUrl: String,
+    val lat: Double = 0.0,
+    val lng: Double = 0.0
 )
 
 data class Medicine(
@@ -23,36 +25,42 @@ data class Medicine(
 val MOCK_CLINICS = listOf(
     Clinic(
         id = 1,
-        name = "Primary Health Centre (PHC), Anantapur",
+        name = "District Hospital, Davanagere",
         distance = "2.4 km",
-        address = "Main Road, Near Panchayat Office",
-        phone = "+91 98765 43210",
+        address = "Near Bapuji Hospital Road",
+        phone = "+91 81922 21100",
         status = "Open 24/7",
-        type = "Govt Facility",
+        type = "Govt Hospital",
         rating = 4.2,
-        imageUrl = "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=500&q=80"
+        imageUrl = "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=500&q=80",
+        lat = 14.4673,
+        lng = 75.9216
     ),
     Clinic(
         id = 2,
-        name = "Sanjeevini Pharmacy & Clinic",
+        name = "City Pharmacy & Health Center",
         distance = "3.1 km",
-        address = "Market Street, Block 4",
-        phone = "+91 98765 43211",
-        status = "Closes at 8 PM",
+        address = "P J Extension, Davanagere",
+        phone = "+91 98450 12345",
+        status = "Closes at 10 PM",
         type = "Private Clinic",
         rating = 4.5,
-        imageUrl = "https://images.unsplash.com/photo-1586282391129-76a6df230234?auto=format&fit=crop&w=500&q=80"
+        imageUrl = "https://images.unsplash.com/photo-1586282391129-76a6df230234?auto=format&fit=crop&w=500&q=80",
+        lat = 14.4640,
+        lng = 75.9250
     ),
     Clinic(
         id = 3,
-        name = "Community Health Centre",
+        name = "Vishwa Health Care, Davanagere",
         distance = "5.5 km",
-        address = "District Hospital Road",
+        address = "Hadadi Road, Davanagere",
         phone = "+91 800 123 4567",
         status = "Open 24/7",
-        type = "Govt Facility",
+        type = "Multi-speciality",
         rating = 4.0,
-        imageUrl = "https://images.unsplash.com/photo-1538108149393-cebb3010b96b?auto=format&fit=crop&w=500&q=80"
+        imageUrl = "https://images.unsplash.com/photo-1538108149393-cebb3010b96b?auto=format&fit=crop&w=500&q=80",
+        lat = 14.4550,
+        lng = 75.9180
     )
 )
 

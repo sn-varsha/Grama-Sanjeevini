@@ -1,14 +1,18 @@
 package com.example.gramasanjeevini
 
+import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.gramasanjeevini.models.UserProfile
 import com.example.gramasanjeevini.ui.ConsumerApp
 import com.example.gramasanjeevini.ui.LandingScreen
 import com.example.gramasanjeevini.ui.LoginScreen
@@ -24,16 +28,30 @@ class MainActivity : ComponentActivity() {
         setContent {
             GramaSanjeeviniTheme {
                 var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
-                var userRole by remember { mutableStateOf<String?>(null) }
-                var isLoadingRole by remember { mutableStateOf(false) }
+                var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+                var isLoadingProfile by remember { mutableStateOf(false) }
                 var showLanding by remember { mutableStateOf(true) }
+
+                // Request location permissions at startup
+                val locationPermissionLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestMultiplePermissions()
+                ) { _ -> }
+
+                LaunchedEffect(Unit) {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
                 
                 // Auth State Listener
                 DisposableEffect(Unit) {
                     val listener = FirebaseAuth.AuthStateListener { auth ->
                         user = auth.currentUser
                         if (user == null) {
-                            userRole = null
+                            userProfile = null
                         }
                     }
                     FirebaseAuth.getInstance().addAuthStateListener(listener)
@@ -42,19 +60,19 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Fetch Role when user signs in
+                // Fetch Profile when user signs in
                 LaunchedEffect(user) {
                     if (user != null) {
-                        isLoadingRole = true
+                        isLoadingProfile = true
                         FirebaseFirestore.getInstance().collection("users")
                             .document(user!!.uid)
                             .get()
                             .addOnSuccessListener { doc ->
-                                userRole = doc.getString("role")
-                                isLoadingRole = false
+                                userProfile = doc.toObject(UserProfile::class.java)
+                                isLoadingProfile = false
                             }
                             .addOnFailureListener {
-                                isLoadingRole = false
+                                isLoadingProfile = false
                             }
                     }
                 }
@@ -65,15 +83,15 @@ class MainActivity : ComponentActivity() {
                     } else {
                         LoginScreen()
                     }
-                } else if (isLoadingRole) {
+                } else if (isLoadingProfile) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 } else {
-                    if (userRole == "pharmacist") {
+                    if (userProfile?.role == "pharmacist") {
                         PharmacistApp(onSignOut = { FirebaseAuth.getInstance().signOut() })
                     } else {
-                        ConsumerApp(onSignOut = { FirebaseAuth.getInstance().signOut() })
+                        ConsumerApp(userProfile = userProfile, onSignOut = { FirebaseAuth.getInstance().signOut() })
                     }
                 }
             }
