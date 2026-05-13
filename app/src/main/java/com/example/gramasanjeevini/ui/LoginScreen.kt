@@ -28,8 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.gramasanjeevini.models.UserProfile
+import com.example.gramasanjeevini.utils.Utils
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -61,23 +63,26 @@ fun LoginScreen() {
             userLat = result.data?.getDoubleExtra("lat", 0.0) ?: 0.0
             userLng = result.data?.getDoubleExtra("lng", 0.0) ?: 0.0
             isLocationFetched = true
-            Toast.makeText(context, "Location Set from Map!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Location saved!", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun openMapPicker(lat: Double, lng: Double) {
+        val intent = Intent(context, LocationPickerActivity::class.java).apply {
+            putExtra("lat", lat)
+            putExtra("lng", lng)
+        }
+        mapLauncher.launch(intent)
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+            val cts = CancellationTokenSource()
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
                 .addOnSuccessListener { loc ->
-                    val intent = Intent(context, LocationPickerActivity::class.java).apply {
-                        if (loc != null) {
-                            putExtra("lat", loc.latitude)
-                            putExtra("lng", loc.longitude)
-                        }
-                    }
-                    mapLauncher.launch(intent)
+                    openMapPicker(loc?.latitude ?: Utils.DEFAULT_LAT, loc?.longitude ?: Utils.DEFAULT_LNG)
                 }
         }
     }
@@ -178,15 +183,10 @@ fun LoginScreen() {
                             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                                 locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                             } else {
-                                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                                val cts = CancellationTokenSource()
+                                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
                                     .addOnSuccessListener { loc ->
-                                        val intent = Intent(context, LocationPickerActivity::class.java).apply {
-                                            if (loc != null) {
-                                                putExtra("lat", loc.latitude)
-                                                putExtra("lng", loc.longitude)
-                                            }
-                                        }
-                                        mapLauncher.launch(intent)
+                                        openMapPicker(loc?.latitude ?: Utils.DEFAULT_LAT, loc?.longitude ?: Utils.DEFAULT_LNG)
                                     }
                             }
                         },

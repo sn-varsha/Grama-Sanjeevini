@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Looper
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -14,8 +16,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,28 +45,19 @@ import androidx.navigation.navArgument
 import com.example.gramasanjeevini.models.InventoryItem
 import com.example.gramasanjeevini.models.UserProfile
 import com.example.gramasanjeevini.utils.Utils
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Locale
 
 @Composable
 fun ConsumerApp(userProfile: UserProfile?, onSignOut: () -> Unit) {
     val navController = rememberNavController()
-    
     NavHost(navController = navController, startDestination = "dashboard") {
-        composable("dashboard") {
-            DashboardScreen(navController, onSignOut)
-        }
-        composable("search") {
-            MedicineSearchScreen(navController, userProfile, onSignOut)
-        }
-        composable("symptom_checker") {
-            SymptomCheckerScreen(navController)
-        }
-        composable("care_centers") {
-            CareCentersScreen(navController, userProfile)
-        }
+        composable("dashboard") { DashboardScreen(navController, onSignOut) }
+        composable("search") { MedicineSearchScreen(navController, userProfile, onSignOut) }
+        composable("symptom_checker") { SymptomCheckerScreen(navController) }
+        composable("care_centers") { CareCentersScreen(navController, userProfile) }
         composable(
             route = "store_details/{storeId}",
             arguments = listOf(navArgument("storeId") { type = NavType.IntType })
@@ -78,41 +77,31 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     
-    // User coordinates: Use profile if available and not 0.0, else fallback to Davanagere region
-    var userLat by remember { 
-        mutableDoubleStateOf(
-            if (userProfile != null && Math.abs(userProfile.lat) > 0.01) userProfile.lat else Utils.DEFAULT_LAT 
-        ) 
-    }
-    var userLng by remember { 
-        mutableDoubleStateOf(
-            if (userProfile != null && Math.abs(userProfile.lng) > 0.01) userProfile.lng else Utils.DEFAULT_LNG 
-        ) 
-    }
+    var userLat by remember { mutableDoubleStateOf(userProfile?.lat ?: Utils.DEFAULT_LAT) }
+    var userLng by remember { mutableDoubleStateOf(userProfile?.lng ?: Utils.DEFAULT_LNG) }
     
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasLocationPermission = isGranted
-    }
-
-    LaunchedEffect(hasLocationPermission) {
-        if (!hasLocationPermission) {
-            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        } else {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+    fun refreshLocation() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(context, "Fetching real-time location...", Toast.LENGTH_SHORT).show()
+            val cts = CancellationTokenSource()
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
                 .addOnSuccessListener { location ->
                     if (location != null) {
                         userLat = location.latitude
                         userLng = location.longitude
+                        Toast.makeText(context, "Location updated: ${String.format(Locale.getDefault(), "%.4f, %.4f", userLat, userLng)}", Toast.LENGTH_SHORT).show()
+                        
+                        // Force refresh distances if results are already showing
+                        if (results.isNotEmpty()) {
+                            results = results.map { (item, _) ->
+                                val dist = Utils.calculateDistance(userLat, userLng, item.pharmacyLat, item.pharmacyLng)
+                                Pair(item, dist)
+                            }.sortedBy { if (it.second >= 0) it.second else Double.MAX_VALUE }
+                        }
+                    } else {
+                        Toast.makeText(context, "GPS Signal weak. Ensure location is enabled.", Toast.LENGTH_LONG).show()
                     }
                 }
         }
@@ -128,6 +117,9 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                     }
                 },
                 actions = {
+                    IconButton(onClick = { refreshLocation() }) {
+                        Icon(Icons.Default.MyLocation, contentDescription = "Refresh Location", tint = Color.White)
+                    }
                     IconButton(onClick = onSignOut) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out", tint = Color.White)
                     }
@@ -137,7 +129,6 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFF3F4F6))) {
-            
             Card(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 shape = RoundedCornerShape(16.dp),
@@ -158,8 +149,7 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                                 onClick = {
                                     if (searchQuery.isNotBlank()) {
                                         isLoading = true
-                                        val db = FirebaseFirestore.getInstance()
-                                        db.collection("inventory").get()
+                                        FirebaseFirestore.getInstance().collection("inventory").get()
                                             .addOnSuccessListener { snapshot ->
                                                 val found = mutableListOf<Pair<InventoryItem, Double>>()
                                                 val lowerQuery = searchQuery.lowercase()
@@ -170,7 +160,6 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                                                         found.add(Pair(item, dist))
                                                     }
                                                 }
-                                                // Sort by distance (unknown distance -1.0 goes to end)
                                                 results = found.sortedBy { if (it.second >= 0) it.second else Double.MAX_VALUE }
                                                 isLoading = false
                                             }
@@ -180,21 +169,10 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
                                 modifier = Modifier.padding(end = 4.dp),
                                 shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Search")
-                            }
+                            ) { Text("Search") }
                         },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                     )
-                    
-                    if (!hasLocationPermission) {
-                        Text(
-                            "Location permission is required for accurate distance calculation.",
-                            color = Color.Red,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
                 }
             }
 
@@ -212,63 +190,48 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                             elevation = CardDefaults.cardElevation(2.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.Black)
-                                        if (item.isLifeSaving) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Surface(color = Color(0xFFFEE2E2), shape = RoundedCornerShape(4.dp)) {
-                                                Text("Life-Saving", color = Color.Red, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
-                                            }
-                                        }
-                                    }
-                                    Text(text = "${item.quantity} in stock", color = if (item.quantity > 0) Color(0xFF16A34A) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                }
+                                Text(text = item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0D9488), modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    val distanceText = if (distance >= 0) {
-                                        "${String.format(Locale.getDefault(), "%.2f", distance)} km"
-                                    } else {
-                                        "Distance unknown"
-                                    }
-                                    Text(text = "${item.pharmacyName} ($distanceText)", color = Color.DarkGray)
+                                    val distText = if (distance >= 0) String.format(Locale.getDefault(), "%.2f km", distance) else "Distance N/A"
+                                    Text(text = "${item.pharmacyName} ($distText)", color = Color.DarkGray)
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(
                                         onClick = {
-                                            if (Math.abs(item.pharmacyLat) > 0.01) {
-                                                val gmmIntentUri = Uri.parse("google.navigation:q=${item.pharmacyLat},${item.pharmacyLng}")
-                                                val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                                            if (item.pharmacyLat != 0.0) {
+                                                // FIXED: Explicitly providing origin and destination for reliable routing
+                                                val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=$userLat,$userLng&destination=${item.pharmacyLat},${item.pharmacyLng}&travelmode=driving")
+                                                val mapIntent = Intent(Intent.ACTION_VIEW, uri)
                                                 mapIntent.setPackage("com.google.android.apps.maps")
                                                 context.startActivity(mapIntent)
-                                            } else {
-                                                android.widget.Toast.makeText(context, "Pharmacy location not set", android.widget.Toast.LENGTH_SHORT).show()
                                             }
                                         },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) { Text("Get Directions") }
-                                    
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Directions, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Directions")
+                                    }
                                     Button(
                                         onClick = {
                                             if (item.pharmacyPhone.isNotBlank()) {
-                                                val dialerPhone = Utils.formatForDialer(item.pharmacyPhone)
-                                                val intent = Intent(Intent.ACTION_DIAL).apply {
-                                                    data = Uri.parse("tel:$dialerPhone")
-                                                }
+                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${item.pharmacyPhone}"))
                                                 context.startActivity(intent)
                                             }
                                         },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(1f).height(48.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) { Text("Call Shop") }
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Call, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Call")
+                                    }
                                 }
                             }
                         }

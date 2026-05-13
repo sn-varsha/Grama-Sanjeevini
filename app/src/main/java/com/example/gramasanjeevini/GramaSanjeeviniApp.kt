@@ -10,7 +10,6 @@ class GramaSanjeeviniApp : Application() {
         super.onCreate()
         
         // OSMDroid configuration
-        // Load default preferences for OSM
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         Configuration.getInstance().load(this, sharedPrefs)
         

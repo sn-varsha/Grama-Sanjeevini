@@ -171,12 +171,30 @@ fun PharmacistApp(onSignOut: () -> Unit) {
                             colors = CardDefaults.cardColors(containerColor = Color.White)
                         ) {
                             ListItem(
-                                headlineContent = { Text(item.name, fontWeight = FontWeight.Medium, color = Color.Black) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                leadingContent = {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFFE6F4F1),
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.MedicalServices,
+                                            contentDescription = null,
+                                            tint = Color(0xFF0D9488),
+                                            modifier = Modifier.padding(12.dp).size(28.dp)
+                                        )
+                                    }
+                                },
+                                headlineContent = { Text(item.name, fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 20.sp) },
                                 supportingContent = { 
-                                    Column {
-                                        Text("Qty: ${item.quantity}", color = Color.DarkGray)
+                                    Column(modifier = Modifier.padding(top = 4.dp)) {
+                                        Text("Available Quantity: ${item.quantity}", color = Color.DarkGray, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                                         if (item.isLifeSaving) {
-                                            Text("Life-Saving", color = Color.Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Surface(color = Color(0xFFFEE2E2), shape = RoundedCornerShape(4.dp)) {
+                                                Text("Life-Saving", color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+                                            }
                                         }
                                     }
                                 },
@@ -185,7 +203,7 @@ fun PharmacistApp(onSignOut: () -> Unit) {
                                         IconButton(onClick = { 
                                             editingItem = item
                                             showAddForm = false
-                                        }) { Icon(Icons.Default.Edit, "Edit", tint = Color(0xFF0D9488)) }
+                                        }) { Icon(Icons.Default.Edit, "Edit", tint = Color(0xFF0D9488), modifier = Modifier.size(28.dp)) }
                                         
                                         IconButton(onClick = {
                                             db.collection("inventory").document(item.id).delete()
@@ -193,7 +211,7 @@ fun PharmacistApp(onSignOut: () -> Unit) {
                                                     inventory = inventory.filter { it.id != item.id }
                                                     Toast.makeText(context, "Item removed", Toast.LENGTH_SHORT).show()
                                                 }
-                                        }) { Icon(Icons.Default.Delete, "Delete", tint = Color.Red) }
+                                        }) { Icon(Icons.Default.Delete, "Delete", tint = Color.Red, modifier = Modifier.size(28.dp)) }
                                     }
                                 }
                             )

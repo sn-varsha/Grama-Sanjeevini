@@ -19,10 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GramaSanjeevini">
 
-        <!-- Google Maps API key is no longer needed for OSM, but can stay for other services if used -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="API KEY" />
+        <!-- Google Maps API key removed as we are now using OpenStreetMap (OSM) -->
 
         <activity
             android:name=".MainActivity"
