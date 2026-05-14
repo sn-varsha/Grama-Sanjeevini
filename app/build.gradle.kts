@@ -57,13 +57,8 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     
-    // Google Services (Auth and Location ONLY)
-    implementation(libs.play.services.auth)
+    // Location Services
     implementation(libs.play.services.location)
-    
-    // OpenStreetMap (OSM) - 100% Free alternative to Google Maps
-    implementation(libs.osmdroid.android)
-    implementation(libs.androidx.preference.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

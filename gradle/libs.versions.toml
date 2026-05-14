@@ -15,8 +15,7 @@ playServicesLocation = "21.3.0"
 playServicesMaps = "19.0.0"
 mapsCompose = "6.1.2"
 googleServices = "4.4.0"
-osmdroid = "6.1.20"
-preferenceKtx = "1.2.1"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,8 +41,7 @@ play-services-auth = { group = "com.google.android.gms", name = "play-services-a
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
-osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
-androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preferenceKtx" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

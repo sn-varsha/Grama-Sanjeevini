@@ -314,7 +314,7 @@ fun PharmacyRegistration(userId: String, onRegistered: (Pharmacy) -> Unit) {
                 ) {
                     Icon(Icons.Default.Map, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isLocationSet) "Location Fixed ✓" else "Set Store Location on Map")
+                    Text(if (isLocationSet) "Location Set ✓" else "Set Store Location")
                 }
 
                 if (isLoading) {
