@@ -51,13 +51,42 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Locale
 
 @Composable
-fun ConsumerApp(userProfile: UserProfile?, onSignOut: () -> Unit) {
+fun ConsumerApp(
+    userProfile: UserProfile?,
+    onSignOut: () -> Unit,
+    isDarkMode: Boolean = false,
+    onToggleDarkMode: () -> Unit = {},
+    onUserProfileUpdated: (UserProfile) -> Unit = {}
+) {
     val navController = rememberNavController()
+
     NavHost(navController = navController, startDestination = "dashboard") {
-        composable("dashboard") { DashboardScreen(navController, onSignOut) }
-        composable("search") { MedicineSearchScreen(navController, userProfile, onSignOut) }
-        composable("symptom_checker") { SymptomCheckerScreen(navController) }
-        composable("care_centers") { CareCentersScreen(navController, userProfile) }
+        composable("dashboard") {
+            DashboardScreen(
+                navController = navController,
+                userProfile = userProfile,
+                onSignOut = onSignOut
+            )
+        }
+        composable("search") {
+            MedicineSearchScreen(navController, userProfile, onSignOut)
+        }
+        composable("symptom_checker") {
+            SymptomCheckerScreen(navController)
+        }
+        composable("care_centers") {
+            CareCentersScreen(navController, userProfile)
+        }
+        composable("account") {
+            AccountScreen(
+                navController = navController,
+                userProfile = userProfile,
+                isDarkMode = isDarkMode,
+                onToggleDarkMode = onToggleDarkMode,
+                onSignOut = onSignOut,
+                onUserProfileUpdated = onUserProfileUpdated
+            )
+        }
         composable(
             route = "store_details/{storeId}",
             arguments = listOf(navArgument("storeId") { type = NavType.IntType })
@@ -76,10 +105,10 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
     var results by remember { mutableStateOf<List<Pair<InventoryItem, Double>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    
+
     var userLat by remember { mutableDoubleStateOf(userProfile?.lat ?: Utils.DEFAULT_LAT) }
     var userLng by remember { mutableDoubleStateOf(userProfile?.lng ?: Utils.DEFAULT_LNG) }
-    
+
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     fun refreshLocation() {
@@ -92,8 +121,6 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                         userLat = location.latitude
                         userLng = location.longitude
                         Toast.makeText(context, "Location updated: ${String.format(Locale.getDefault(), "%.4f, %.4f", userLat, userLng)}", Toast.LENGTH_SHORT).show()
-                        
-                        // Force refresh distances if results are already showing
                         if (results.isNotEmpty()) {
                             results = results.map { (item, _) ->
                                 val dist = Utils.calculateDistance(userLat, userLng, item.pharmacyLat, item.pharmacyLng)
@@ -203,7 +230,6 @@ fun MedicineSearchScreen(navController: NavController, userProfile: UserProfile?
                                     OutlinedButton(
                                         onClick = {
                                             if (item.pharmacyLat != 0.0) {
-                                                // FIXED: Explicitly providing origin and destination for reliable routing
                                                 val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=$userLat,$userLng&destination=${item.pharmacyLat},${item.pharmacyLng}&travelmode=driving")
                                                 val mapIntent = Intent(Intent.ACTION_VIEW, uri)
                                                 mapIntent.setPackage("com.google.android.apps.maps")
