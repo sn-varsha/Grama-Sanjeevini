@@ -187,13 +187,85 @@ fun PharmacistApp(onSignOut: () -> Unit) {
                                     }
                                 },
                                 headlineContent = { Text(item.name, fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 20.sp) },
-                                supportingContent = { 
+                                supportingContent = {
                                     Column(modifier = Modifier.padding(top = 4.dp)) {
-                                        Text("Available Quantity: ${item.quantity}", color = Color.DarkGray, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            "Qty in Stock: ${item.quantity}",
+                                            color = Color.DarkGray,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+
+                                        // Show expiry date if set
+                                        if (item.expiryDate > 0) {
+                                            val daysLeft = ((item.expiryDate - System.currentTimeMillis()) /
+                                                    (1000 * 60 * 60 * 24)).toInt()
+                                            val expiryStr = java.text.SimpleDateFormat(
+                                                "dd MMM yyyy", java.util.Locale.getDefault()
+                                            ).format(java.util.Date(item.expiryDate))
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                "Expires: $expiryStr",
+                                                color = Color.Gray,
+                                                fontSize = 12.sp
+                                            )
+
+                                            // Expiry Watch badge
+                                            when {
+                                                daysLeft < 0 -> {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Surface(
+                                                        color = Color(0xFFFEE2E2),
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    ) {
+                                                        Text(
+                                                            "⚠️ Expired — Remove or Discount",
+                                                            color = Color(0xFFDC2626),
+                                                            fontSize = 12.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(
+                                                                horizontal = 6.dp, vertical = 2.dp
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                                daysLeft <= 30 -> {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Surface(
+                                                        color = Color(0xFFFFF7ED),
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    ) {
+                                                        Text(
+                                                            "⏳ Expiring in $daysLeft days — Sell Soon",
+                                                            color = Color(0xFFD97706),
+                                                            fontSize = 12.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(
+                                                                horizontal = 6.dp, vertical = 2.dp
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Life-Saving badge
                                         if (item.isLifeSaving) {
                                             Spacer(modifier = Modifier.height(4.dp))
-                                            Surface(color = Color(0xFFFEE2E2), shape = RoundedCornerShape(4.dp)) {
-                                                Text("Life-Saving", color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+                                            Surface(
+                                                color = Color(0xFFFEE2E2),
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    "🚨 Life-Saving Drug",
+                                                    color = Color.Red,
+                                                    fontSize = 12.sp,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 6.dp, vertical = 2.dp
+                                                    ),
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
                                         }
                                     }
